@@ -264,12 +264,11 @@ int main(int argc, char** argv)
     std::string hoAlgorithm = "A2A4";
     bool denseScenario = false;
     
-    // ==================== CAMBIO 1: Solo potencia UE añadida ====================
-    // Parámetros del canal - mantengo gnbTxPower igual, solo añado ueTxPower
-    double gnbTxPower = 46.0; // IGUAL que tu código
-    double ueTxPower = 26.0;  // CAMBIO 2: Solo añadir esto
-    double gnbHeight = 25.0;  // IGUAL que tu código
-    double ueHeight = 1.5;    // IGUAL que tu código
+    // Parámetros del canal 
+    double gnbTxPower = 46.0; 
+    double ueTxPower = 26.0;  
+    double gnbHeight = 25.0;   
+    double ueHeight = 1.5;     
     
     CommandLine cmd(__FILE__);
     cmd.AddValue("numCells", "Número de celdas (1,3,5,7,9)", numCells);
@@ -284,22 +283,22 @@ int main(int argc, char** argv)
     cmd.AddValue("denseScenario", "Escenario denso (true) o disperso (false)", denseScenario);
     cmd.Parse(argc, argv);
     
-    // Configurar directorios de salida - IGUAL que tu código
+    // Configurar directorios de salida -  
     std::string scenarioName = denseScenario ? "dense" : "sparse";
     std::ostringstream dirStream;
     dirStream << outputDir; 
     outputDir = dirStream.str();
     std::filesystem::create_directories(outputDir);
     
-    // Inicialización - IGUAL que tu código
+    // Inicialización -  
     SeedManager::SetSeed(rngSeed);
     
-    // Crear nodos - IGUAL que tu código
+    // Crear nodos -  
     NodeContainer gnbNodes, ueNodes;
     gnbNodes.Create(numCells);
     ueNodes.Create(numUEs);
     
-    // Configurar movilidad de gNBs - IGUAL que tu código
+    // Configurar movilidad de gNBs -  
     MobilityHelper gnbMobility;
     gnbMobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
     
@@ -309,13 +308,13 @@ int main(int argc, char** argv)
     gnbMobility.SetPositionAllocator(gnbPositions);
     gnbMobility.Install(gnbNodes);
     
-    // Configurar movilidad de UEs - IGUAL que tu código
+    // Configurar movilidad de UEs -  
     MobilityHelper ueMobility;
     ueMobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
     ueMobility.Install(ueNodes);
     DistributeUsersOptimized(ueNodes, gnbNodes, scenario, ISD, ueHeight);
     
-    // Configurar NR Helper con beamforming mejorado - IGUAL que tu código
+    // Configurar NR Helper con beamforming mejorado -  
     Ptr<NrPointToPointEpcHelper> epcHelper = CreateObject<NrPointToPointEpcHelper>();
     
     Ptr<RealisticBeamformingHelper> beamformingHelper = CreateObject<RealisticBeamformingHelper>();
@@ -326,66 +325,64 @@ int main(int argc, char** argv)
     nrHelper->SetBeamformingHelper(beamformingHelper);
     nrHelper->SetGnbBeamManagerTypeId(RealisticBfManager::GetTypeId());
     
-    // Configuraciones avanzadas - IGUAL que tu código
+    // Configuraciones avanzadas -  
     nrHelper->SetAttribute("EnableMimoFeedback", BooleanValue(true));
     nrHelper->SetAttribute("CsiFeedbackFlags", UintegerValue(7)); // Todas las banderas CSI
     
-    // Scheduler optimizado - IGUAL que tu código
+    // Scheduler optimizado -  
     std::string schedulerTypeId = "ns3::NrMacScheduler" + scheduler;
     nrHelper->SetSchedulerTypeId(TypeId::LookupByName(schedulerTypeId));
     nrHelper->SetSchedulerAttribute("SchedLcAlgorithmType", 
         TypeIdValue(NrMacSchedulerLcQos::GetTypeId()));
     
-    // ==================== CAMBIO 7: Solo handover optimizado ====================
-    // Configurar handover - CAMBIO: parámetros optimizados
+    // Configurar handover 
     if (hoAlgorithm == "A2A4") {
         nrHelper->SetHandoverAlgorithmType("ns3::A2A4RsrqHandoverAlgorithm");
-        nrHelper->SetHandoverAlgorithmAttribute("ServingCellThreshold", UintegerValue(15)); // CAMBIO: 15 vs 18
-        nrHelper->SetHandoverAlgorithmAttribute("NeighbourCellOffset", UintegerValue(3)); // CAMBIO: 3 vs 5
+        nrHelper->SetHandoverAlgorithmAttribute("ServingCellThreshold", UintegerValue(15)); 
+        nrHelper->SetHandoverAlgorithmAttribute("NeighbourCellOffset", UintegerValue(3)); 
     }
     
-    // Configurar banda y canal - IGUAL que tu código base
+    // Configurar banda y canal -   base
     CcBwpCreator ccBwpCreator;
     CcBwpCreator::SimpleOperationBandConf bandConf(3.5e9, 100e6, 1);
     OperationBandInfo band = ccBwpCreator.CreateOperationBandContiguousCc(bandConf);
     
     Ptr<NrChannelHelper> channelHelper = CreateObject<NrChannelHelper>();
     
-    // ==================== CAMBIO 5: Solo modelo propagación optimizado ====================
-    // Modelo de propagación según escenario - CAMBIO: UMa para denso
+  
+    // Modelo de propagación según escenario 
     std::string propagationModel = denseScenario ? "UMa" : "RMa"; 
     channelHelper->ConfigureFactories(propagationModel, "Default", "ThreeGpp");
     channelHelper->AssignChannelsToBands({band});
     
     BandwidthPartInfoPtrVector allBwps = CcBwpCreator::GetAllBwps({band});
     
-    // Instalar dispositivos - IGUAL que tu código
+    // Instalar dispositivos -  
     NetDeviceContainer gnbDevices = nrHelper->InstallGnbDevice(gnbNodes, allBwps);
     NetDeviceContainer ueDevices = nrHelper->InstallUeDevice(ueNodes, allBwps);
     
-    // ==================== CAMBIO 1: Solo numerología optimizada ====================
-    // Configurar parámetros de gNB - CAMBIO: numerología 2 vs 1
+   
+    // Configurar parámetros de gNB 
     for (uint32_t i = 0; i < gnbDevices.GetN(); ++i) {
         Ptr<NrGnbPhy> gnbPhy = nrHelper->GetGnbPhy(gnbDevices.Get(i), 0);
         gnbPhy->SetAttribute("TxPower", DoubleValue(gnbTxPower));
-        gnbPhy->SetAttribute("Numerology", UintegerValue(2)); // CAMBIO: 2 vs 1 (30 kHz vs 15 kHz)
+        gnbPhy->SetAttribute("Numerology", UintegerValue(2)); 
     }
     
-    // ==================== CAMBIO 2: Solo potencia UE añadida ====================
-    // Añadir configuración de potencia UE (no estaba en tu código original)
+    // Añadir configuración de potencia UE 
     for (uint32_t i = 0; i < ueDevices.GetN(); ++i) {
         Ptr<NrUePhy> uePhy = nrHelper->GetUePhy(ueDevices.Get(i), 0);
-        uePhy->SetAttribute("TxPower", DoubleValue(ueTxPower)); // CAMBIO: Añadir potencia UE
+        uePhy->SetAttribute("TxPower", DoubleValue(ueTxPower)); 
     }
     
-    // Configurar EPC - IGUAL que tu código
+    // Configurar EPC -  
     auto [remoteHost, remoteAddr] = epcHelper->SetupRemoteHost("100Gb/s", 1000, Seconds(0));
     InternetStackHelper internet;
     internet.Install(ueNodes);
     internet.Install(remoteHost);
     Ipv4InterfaceContainer ueIpIfaces = epcHelper->AssignUeIpv4Address(ueDevices);
     
-    // Clasificar UEs - IGUAL que tu código
+    // Clasificar UEs 
     uint32_t numEmbbUEs = static_cast<uint32_t>(embbRatio * numUEs);
     NodeContainer embbUEs, urllcUEs;
     NetDeviceContainer embbDevices, urllcDevices;
@@ -411,12 +408,12 @@ int main(int argc, char** argv)
     } else {
         perUeRateBps = static_cast<uint64_t>(10e6);
     }
-    // Configurar aplicaciones - IGUAL que tu código
+    // Configurar aplicaciones -  
     uint16_t embbPort = 7000;
     uint16_t urllcPort = 7001;
     ApplicationContainer serverApps, clientApps;
     
-    // Aplicaciones eMBB - Video streaming - IGUAL que tu código
+    // Aplicaciones eMBB - Video streaming 
     for (uint32_t i = 0; i < embbUEs.GetN(); ++i) {
         PacketSinkHelper sinkHelper("ns3::UdpSocketFactory", 
             InetSocketAddress(Ipv4Address::GetAny(), embbPort));
@@ -426,7 +423,7 @@ int main(int argc, char** argv)
         OnOffHelper onOffHelper("ns3::UdpSocketFactory", 
             InetSocketAddress(destAddr, embbPort));
         
-        // Tráfico variable según escenario - IGUAL que tu código
+        // Tráfico variable según escenario -  
         onOffHelper.SetAttribute("PacketSize", UintegerValue(1400));
         onOffHelper.SetAttribute("DataRate", DataRateValue(DataRate(perUeRateBps)));
         onOffHelper.SetAttribute("OnTime", StringValue("ns3::ConstantRandomVariable[Constant=1]"));
@@ -434,13 +431,13 @@ int main(int argc, char** argv)
         
         clientApps.Add(onOffHelper.Install(remoteHost));
         
-        // Bearer eMBB - IGUAL que tu código
+        // Bearer eMBB -  
         NrEpsBearer bearer(NrEpsBearer::NGBR_VIDEO_TCP_DEFAULT);
         nrHelper->ActivateDedicatedEpsBearer(embbDevices.Get(i), bearer, Create<NrEpcTft>());
     }
     
-    // ==================== CAMBIO 4: Solo intervalo URLLC optimizado ====================
-    // Aplicaciones URLLC - Control crítico - CAMBIO: intervalo más frecuente
+    
+    // Aplicaciones URLLC - Control crítico 
     for (uint32_t i = 0; i < urllcUEs.GetN(); ++i) {
         PacketSinkHelper sinkHelper("ns3::UdpSocketFactory", 
             InetSocketAddress(Ipv4Address::GetAny(), urllcPort));
@@ -450,9 +447,9 @@ int main(int argc, char** argv)
         Ipv4Address destAddr = ueIpIfaces.GetAddress(ueIdx);
         UdpClientHelper udpClient(destAddr, urllcPort);
         
-        // Configuración URLLC optimizada - CAMBIO: intervalo más frecuente
-        uint32_t pktSize = 100; // IGUAL que tu código
-        double interval = denseScenario ? 0.0005 : 0.001; // CAMBIO: más frecuente (era 0.001 : 0.002)
+        // Configuración URLLC optimizada 
+        uint32_t pktSize = 100; //  
+        double interval = denseScenario ? 0.0005 : 0.001; 
         
         udpClient.SetAttribute("PacketSize", UintegerValue(pktSize));
         udpClient.SetAttribute("Interval", TimeValue(Seconds(interval)));
@@ -460,15 +457,15 @@ int main(int argc, char** argv)
         
         clientApps.Add(udpClient.Install(remoteHost));
         
-        // Bearer URLLC - IGUAL que tu código
+        // Bearer URLLC -  
         NrEpsBearer bearer(NrEpsBearer::NGBR_LOW_LAT_EMBB);
         nrHelper->ActivateDedicatedEpsBearer(urllcDevices.Get(i), bearer, Create<NrEpcTft>());
     }
     
-    // Conectar UEs a la celda más cercana - IGUAL que tu código
+    // Conectar UEs a la celda más cercana -  
     nrHelper->AttachToClosestGnb(ueDevices, gnbDevices);
     
-    // Configurar trazas mejoradas - IGUAL que tu código
+    // Configurar trazas mejoradas -  
     for (uint32_t i = 0; i < ueDevices.GetN(); ++i) {
         Ptr<NrUeNetDevice> ueDevice = ueDevices.Get(i)->GetObject<NrUeNetDevice>();
         uint64_t imsi = ueDevice->GetImsi();
@@ -487,7 +484,7 @@ int main(int argc, char** argv)
             MakeBoundCallback(&HandoverFailureCallback, imsi));
     }
     
-    // Calcular asociaciones UE-celda y distancias - IGUAL que tu código
+    // Calcular asociaciones UE-celda y distancias -  
     for (uint32_t i = 0; i < numUEs; ++i) {
         Vector uePos = ueNodes.Get(i)->GetObject<MobilityModel>()->GetPosition();
         double minDistance = std::numeric_limits<double>::max();
@@ -509,7 +506,7 @@ int main(int argc, char** argv)
         g_cellUeCount[closestCell]++;
     }
     
-    // Configurar y ejecutar simulación - IGUAL que tu código
+    // Configurar y ejecutar simulación -  
     Ptr<UniformRandomVariable> appJitter = CreateObject<UniformRandomVariable>();
 
     for (uint32_t i = 0; i < serverApps.GetN(); ++i) {
@@ -881,3 +878,4 @@ int main(int argc, char** argv)
     Simulator::Destroy();
     return 0;
 }
+
